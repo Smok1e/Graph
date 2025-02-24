@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Objects/Object.hpp>
-#include <Objects/Node.hpp>
+#include <Graph/Objects/Object.hpp>
+#include <Graph/Objects/Node.hpp>
 
 #include <SFML/Graphics.hpp>
 

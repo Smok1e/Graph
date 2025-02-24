@@ -3,10 +3,10 @@
 #include <string>
 #include <string_view>
 
-#include <Objects/Object.hpp>
-#include <Objects/Node.hpp>
+#include <Graph/Objects/Object.hpp>
+#include <Graph/Objects/Node.hpp>
 
-#include <Config.hpp>
+#include <Graph/Config.hpp>
 
 #include <SFML/Graphics.hpp>
 
@@ -31,11 +31,12 @@ public:
 	void setLabel(std::string_view label);
 	std::string_view getLabel() const;
 
+	int getPriority() const override;
+	Edge* isAdjacent(Node* node) const;
+
 	void onAdded(ObjectManager* manager) override;
 	void draw() override;
 	bool onEvent(const sf::Event& event) override;
-
-	int getPriority() const override;
 
 	void onDelete() override;
 	void onEdgeConnected(Edge* edge);

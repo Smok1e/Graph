@@ -1,4 +1,4 @@
-#include "ImmersiveDarkMode.hpp"
+#include <Graph/ImmersiveDarkMode.hpp>
 
 //=================================================
 

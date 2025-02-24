@@ -2,13 +2,13 @@
 #include <numbers>
 #include <iostream>
 
-#include <Objects/Edge.hpp>
-#include <Objects/Node.hpp>
-#include <Objects/ObjectManager.hpp>
+#include <Graph/Objects/Edge.hpp>
+#include <Graph/Objects/Node.hpp>
+#include <Graph/Objects/ObjectManager.hpp>
 
-#include <Config.hpp>
-#include <Utils.hpp>
-#include <ImGuiExtra.hpp>
+#include <Graph/Config.hpp>
+#include <Graph/Utils.hpp>
+#include <Graph/ImGuiExtra.hpp>
 
 //========================================
 

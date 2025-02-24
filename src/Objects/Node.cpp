@@ -1,13 +1,13 @@
 #include <format>
 #include <iostream>
 
-#include <Objects/Node.hpp>
-#include <Objects/Edge.hpp>
-#include <Objects/ObjectManager.hpp>
+#include <Graph/Objects/Node.hpp>
+#include <Graph/Objects/Edge.hpp>
+#include <Graph/Objects/ObjectManager.hpp>
 
-#include <Config.hpp>
-#include <Utils.hpp>
-#include <ImGuiExtra.hpp>
+#include <Graph/Config.hpp>
+#include <Graph/Utils.hpp>
+#include <Graph/ImGuiExtra.hpp>
 
 //========================================
 
@@ -84,6 +84,27 @@ const char* Node::getName() const
 int Node::getPriority() const
 {
 	return 1;
+}
+
+Edge* Node::isAdjacent(Node* node) const
+{
+	if (node == this)
+		return nullptr;
+
+	auto iter = std::find_if(
+		m_connected_edges.begin(),
+		m_connected_edges.end(),
+		[node](Edge* edge) -> bool
+		{
+			return 
+				edge->getNodeA() == node ||
+				edge->getNodeB() == node;
+		}
+	);
+
+	return iter != m_connected_edges.end()
+		? *iter
+		: nullptr;
 }
 
 //========================================

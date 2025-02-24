@@ -1,8 +1,8 @@
 #include <format>
 
-#include <Objects/Object.hpp>
-#include <Objects/ObjectManager.hpp>
-#include <ImGuiExtra.hpp>
+#include <Graph/Objects/Object.hpp>
+#include <Graph/Objects/ObjectManager.hpp>
+#include <Graph/ImGuiExtra.hpp>
 
 //========================================
 

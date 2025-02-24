@@ -2,8 +2,8 @@
 #include <algorithm>
 #include <iostream>
 
-#include <Objects/ObjectManager.hpp>
-#include <Objects/Object.hpp>
+#include <Graph/Objects/ObjectManager.hpp>
+#include <Graph/Objects/Object.hpp>
 
 //========================================
 

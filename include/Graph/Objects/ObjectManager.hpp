@@ -6,8 +6,8 @@
 
 #include <SFML/Graphics.hpp>
 
-#include <Objects/Object.hpp>
-#include <Objects/Edge.hpp>
+#include <Graph/Objects/Object.hpp>
+#include <Graph/Objects/Edge.hpp>
 
 //========================================
 

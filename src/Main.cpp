@@ -4,15 +4,17 @@
 #include <numbers>
 #include <random>
 #include <format>
+#include <numeric>
 
 #include <SFML/Graphics.hpp>
 
-#include <Objects/Node.hpp>
-#include <Objects/Edge.hpp>
-#include <Objects/ObjectManager.hpp>
+#include <Graph/Objects/Node.hpp>
+#include <Graph/Objects/Edge.hpp>
+#include <Graph/Objects/ObjectManager.hpp>
 
-#include <ImmersiveDarkMode.hpp>
-#include <ImGuiExtra.hpp>
+#include <Graph/ImmersiveDarkMode.hpp>
+#include <Graph/ImGuiExtra.hpp>
+#include <Graph/Config.hpp>
 
 //========================================
 
@@ -37,6 +39,7 @@ private:
 
 	void onEvent(const sf::Event& event);
 	void processInterface();
+	void generateRandomGraph();
 
 };
 
@@ -53,7 +56,7 @@ void Main::run()
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
 
-	m_render_window.create(sf::VideoMode(1000, 1000), "Graph editor", sf::Style::Default & ~sf::Style::Resize, settings);
+	m_render_window.create(sf::VideoMode(1000, 1000), "Graph editor", sf::Style::Default, settings);
 	m_render_window.setVerticalSyncEnabled(true);
 	m_object_manager.setWindow(&m_render_window);
 
@@ -63,6 +66,7 @@ void Main::run()
 
 	auto& style = ImGui::GetStyle();
 	style.WindowRounding = 4;
+	style.WindowBorderSize = 0;
 
 	while (m_render_window.isOpen())
 	{
@@ -94,8 +98,16 @@ void Main::processInterface()
 	{
 		if (ImGui::BeginMenu("View"))
 		{
-			ImGui::MenuItem("Objects",    nullptr, &m_objects_show);
+			ImGui::MenuItem("Objects",    nullptr, &m_objects_show   );
 			ImGui::MenuItem("ImGui demo", nullptr, &m_imgui_demo_show);
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Edit"))
+		{
+			if (ImGui::MenuItem("Clear"))
+				m_object_manager.clear();
+
 			ImGui::EndMenu();
 		}
 
@@ -115,57 +127,17 @@ void Main::processInterface()
 			)
 		)
 		{
-			ImGui::SeparatorText("Options");
+			ImGui::SeparatorText("Create");
 
-			if (ImGui::Selectable("New node"))
+			if (ImGui::Selectable("Node"))
 			{
 				(m_object_manager += new Node)->setPosition(m_rmb_menu_pos);
 				m_rmb_menu_show = false;
 			}
 
-			if (ImGui::Selectable("New random graph"))
+			if (ImGui::Selectable("Random graph"))
 			{
-				std::mt19937 generator(std::random_device{}());
-
-				auto size = m_render_window.getSize();
-
-				std::uniform_int_distribution<> node_count_dist(3, 10);
-				std::uniform_int_distribution<> edge_count_dist(3, 10);
-				std::uniform_real_distribution<> x_dist(10, size.x - 10);
-				std::uniform_real_distribution<> y_dist(10, size.y - 10);
-
-				std::vector<Node*> nodes;
-				size_t node_count = node_count_dist(generator);
-				for (size_t i = 0; i < node_count; i++)
-				{
-					auto* node = m_object_manager += new Node;
-					node->setPosition(
-						sf::Vector2f(
-							x_dist(generator),
-							y_dist(generator)
-						)
-					);
-
-					nodes.push_back(node);
-				}
-
-				std::uniform_int_distribution<> node_index_dist(0, node_count - 1);
-				size_t edge_count = edge_count_dist(generator);
-				for (size_t i = 0; i < edge_count; i++)
-				{
-					auto a = node_index_dist(generator);
-					auto b = node_index_dist(generator);
-					if (a == b)
-					{
-						edge_count++;
-						continue;
-					}
-
-					auto* edge = m_object_manager += new Edge;
-					edge->setNodeA(nodes[a]);
-					edge->setNodeB(nodes[b]);
-				}
-
+				generateRandomGraph();
 				m_rmb_menu_show = false;
 			}
 
@@ -237,6 +209,20 @@ void Main::onEvent(const sf::Event& event)
 			m_render_window.close();
 			break;
 
+		case sf::Event::Resized:
+			m_render_window.setView(
+				sf::View(
+					sf::FloatRect(
+						0, 
+						0, 
+						event.size.width, 
+						event.size.height
+					)
+				)
+			);
+
+			break;
+
 		case sf::Event::MouseButtonPressed:
 			if (!io.WantCaptureMouse)
 				m_rmb_menu_show = false;
@@ -276,6 +262,92 @@ void Main::onEvent(const sf::Event& event)
 
 			break;
 
+	}
+}
+
+//========================================
+
+void Main::generateRandomGraph()
+{
+	constexpr size_t nodes_min =  3;
+	constexpr size_t nodes_max = 10;
+
+	auto window_size = m_render_window.getSize();
+	std::mt19937 gen(std::random_device{}());
+
+	std::uniform_real_distribution<float> x_dist(
+		config::node_default_radius, 
+		window_size.x - config::node_default_radius
+	);
+
+	std::uniform_real_distribution<float> y_dist(
+		config::node_default_radius, 
+		window_size.y - config::node_default_radius
+	);
+
+	std::vector<Node*> nodes(
+		std::uniform_int_distribution<size_t>(nodes_min, nodes_max)(gen)
+	);
+
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		nodes[i] = m_object_manager += new Node;
+		nodes[i]->setPosition(sf::Vector2f(x_dist(gen), y_dist(gen)));
+	}
+
+	std::vector<int> indices(nodes.size());
+	std::iota(indices.begin(), indices.end(), 0);
+
+	// Connect each node to at least one another
+	for (auto* node: nodes)
+	{
+		// Shuffle nodes indices to iterate them in random order
+		std::shuffle(indices.begin(), indices.end(), gen);
+		for (auto i: indices)
+		{
+			Node* item = nodes[i];
+			if (item == node)
+				continue;
+
+			if (!node->isAdjacent(item))
+			{
+				Edge* edge = m_object_manager += new Edge;
+				edge->setNodeA(node);
+				edge->setNodeB(item);
+
+				break;
+			}
+		}
+	}
+
+	auto random_node = [&nodes, &gen]() -> Node*
+	{
+		return nodes[std::uniform_int_distribution<size_t>(0, nodes.size()-1)(gen)];
+	};
+
+	// C_2_n = n! / 2*(n - 2)!
+	size_t edges_max = tgamma(nodes.size() + 1) / (2 * tgamma(nodes.size() - 2 + 1));
+	if (edges_max > nodes.size())
+	{
+		size_t additional_edge_count = std::uniform_int_distribution<size_t>(
+			0, 
+			edges_max - nodes.size()
+		)(gen);
+	
+		for (size_t i = 0; i < additional_edge_count; )
+		{
+			Node* a = random_node();
+			Node* b = random_node();
+	
+			if (a == b || a->isAdjacent(b))
+				continue;
+	
+			Edge* edge = m_object_manager += new Edge;
+			edge->setNodeA(a);
+			edge->setNodeB(b);
+	
+			i++;
+		}
 	}
 }
 
