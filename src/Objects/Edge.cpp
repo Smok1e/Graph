@@ -1,5 +1,6 @@
 #include <cmath>
 #include <numbers>
+#include <iostream>
 
 #include <Objects/Edge.hpp>
 #include <Objects/Node.hpp>
@@ -15,6 +16,28 @@ Edge::Edge():
 	Object()
 {
 	m_rectangle.setFillColor(config::edge_default_color);
+}
+
+//========================================
+
+void Edge::setThickness(float thickness)
+{
+	m_thickness = thickness;
+}
+
+float Edge::getThickness() const
+{
+	return m_thickness;
+}
+
+void Edge::setColor(sf::Color color)
+{
+	m_color = color;
+}
+
+sf::Color Edge::getColor() const
+{
+	return m_color;
 }
 
 //========================================

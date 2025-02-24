@@ -11,6 +11,30 @@
 
 //========================================
 
+size_t Node::s_node_index = 0;
+
+//========================================
+
+Node::Node():
+	Object()
+{
+	constexpr char letter_begin = 'A';
+	constexpr char letter_end   = 'F' + 1;
+
+	auto index = s_node_index++;
+
+	char letter = letter_begin + index % (letter_end - letter_begin);
+	if (auto suffix = index / (letter_end - letter_begin))
+		setLabel(std::format("{}{}", letter, suffix));
+
+	else
+		setLabel(std::string_view(&letter, 1));
+				 
+	m_text.setCharacterSize(15);
+}
+
+//========================================
+
 void Node::setPosition(const sf::Vector2f& position)
 {
 	m_circle.setPosition(position);
@@ -19,6 +43,47 @@ void Node::setPosition(const sf::Vector2f& position)
 const sf::Vector2f& Node::getPosition() const
 {
 	return m_circle.getPosition();
+}
+
+void Node::setRadius(float radius)
+{
+	m_radius = radius;
+}
+
+float Node::getRadius() const
+{
+	return m_radius;
+}
+
+void Node::setColor(sf::Color color)
+{
+	m_color = color;
+}
+
+sf::Color Node::getColor() const
+{
+	return m_color;
+}
+
+void Node::setLabel(std::string_view label)
+{
+	m_label = label;
+	m_text.setString(std::string(label));
+}
+
+std::string_view Node::getLabel() const
+{
+	return m_label;
+}
+
+const char* Node::getName() const
+{
+	return "Node";
+}
+
+int Node::getPriority() const
+{
+	return 1;
 }
 
 //========================================
@@ -34,6 +99,14 @@ void Node::draw()
 	);
 
 	m_object_manager->getWindow()->draw(m_circle);
+
+	m_text.setString(m_label);
+
+	auto bounds = m_text.getGlobalBounds();
+	m_text.setOrigin(bounds.width / 2, 0);
+	m_text.setPosition(m_circle.getPosition() + sf::Vector2f(0, m_circle.getRadius() + 10));
+
+	m_object_manager->getWindow()->draw(m_text);
 }
 
 bool Node::intersect(const sf::Vector2f& point) const
@@ -41,6 +114,8 @@ bool Node::intersect(const sf::Vector2f& point) const
 	auto distance = point - m_circle.getPosition();
 	return distance.x*distance.x + distance.y*distance.y < pow(m_circle.getRadius(), 2);
 }
+
+//========================================
 
 bool Node::onEvent(const sf::Event& event)
 {
@@ -113,55 +188,69 @@ bool Node::onEvent(const sf::Event& event)
 	return false;
 }
 
-const char* Node::getName() const
-{
-	return "Node";
-}
-
-int Node::getPriority() const
-{
-	return 1;
-}
-
 void Node::onPropertiesShow()
 {
 	ImGui::SliderFloat("Radius", &m_radius, 5, 100);
 	ImGui::ColorEdit3("Color", &m_color);
+	ImGui::InputText("Label", &m_label);
 
-	ImGui::Text("Connected edges:");
-	if (ImGui::BeginTable("table_connected_edges", 2, ImGuiTableFlags_Borders))
+	if (!m_connected_edges.empty())
 	{
-		for (size_t i = 0; i < m_connected_edges.size(); i++)
+		ImGui::Text("Connected edges:");
+		if (ImGui::BeginTable("table_connected_edges", 2, ImGuiTableFlags_Borders))
 		{
-			ImGui::TableNextRow();
+			size_t i = 0;
+			for (auto* edge: m_connected_edges)
+			{
+				ImGui::TableNextRow();
 
-			ImGui::TableNextColumn();
-			ImGui::Selectable(std::format("{}", i + 1).c_str());
+				ImGui::TableNextColumn();
+				ImGui::Selectable(std::to_string(++i).c_str());
 
-			ImGui::TableNextColumn();
-			m_connected_edges[i]->insertSelectableReference();
+				ImGui::TableNextColumn();
+				edge->insertSelectableReference();
+			}
+
+			ImGui::EndTable();
 		}
-
-		ImGui::EndTable();
 	}
+
+	else
+		ImGui::Text("No edges are connected");
+}
+
+//========================================
+
+void Node::onAdded(ObjectManager* manager)
+{
+	Object::onAdded(manager);
+	m_text.setFont(*manager->getFont());
 }
 
 void Node::onDelete()
 {
-	for (auto* edge: m_connected_edges)
+	auto copy = m_connected_edges;
+	for (auto* edge: copy)
 		m_object_manager->deleteObject(edge);
 }
 
 void Node::onEdgeConnected(Edge* edge)
 {
-	m_connected_edges.push_back(edge);
+	if (
+		std::find(
+			m_connected_edges.begin(), 
+			m_connected_edges.end(), 
+			edge
+		) == m_connected_edges.end()
+	)
+		m_connected_edges.push_back(edge);
 }
 
 void Node::onEdgeDisconnected(Edge* edge)
 {
 	auto iter = std::find(
-		m_connected_edges.begin(), 
-		m_connected_edges.end(), 
+		m_connected_edges.begin(),
+		m_connected_edges.end(),
 		edge
 	);
 

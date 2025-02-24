@@ -100,6 +100,7 @@ void Object::onAdded(ObjectManager* manager)
 
 void Object::onDelete()
 {
+	
 }
 
 void Object::onHoverChanged()

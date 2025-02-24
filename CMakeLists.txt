@@ -22,11 +22,6 @@ add_executable(
 
 target_include_directories(graph PRIVATE "include/")
 
-add_executable(
-	test
-	"src/Test.cpp"
-)
-
 if (WIN32)
 	find_package(ImGui-SFML CONFIG REQUIRED)
 	add_compile_definitions(GRAPH_WINDOWS)
@@ -35,4 +30,9 @@ else ()
 endif ()
 
 target_link_libraries(graph PRIVATE ImGui-SFML::ImGui-SFML)
-target_link_libraries(test  PRIVATE ImGui-SFML::ImGui-SFML)
+
+add_custom_command(
+	TARGET graph POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/resources $<TARGET_FILE_DIR:graph>/resources
+)

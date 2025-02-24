@@ -15,13 +15,16 @@ class ObjectManager
 {
 public:
 	using container = std::multiset<Object*, ObjectPtrCmp>;
-	using iterator = container::iterator;
 
 	ObjectManager() = default;
+	ObjectManager(const ObjectManager& copy) = delete;
 	~ObjectManager();
 
 	void setWindow(sf::RenderWindow* window);
 	sf::RenderWindow* getWindow();
+
+	void setFont(sf::Font* font);
+	sf::Font* getFont() const;
 
 	void edgeConnectionStart(Node* node);
 	bool edgeConnectionComplete(Node* node = nullptr);
@@ -42,14 +45,18 @@ public:
 	void processInterface();
 	void cleanup();
 
-	iterator begin();
-	iterator end();
+	size_t size() const;
+	container::iterator begin();
+	container::iterator end();
 
 private:
 	sf::RenderWindow* m_window = nullptr;
+	sf::Font* m_font = nullptr;
 
 	container m_objects {};
-	std::vector<iterator> m_deleted_objects {};
+
+	std::vector<container::iterator> m_deleted_objects {};
+	bool m_clear = false;
 
 	Edge* m_connecting_edge = nullptr;
 	bool m_connecting_cancel = false;

@@ -1,3 +1,7 @@
+#include <cassert>
+#include <algorithm>
+#include <iostream>
+
 #include <Objects/ObjectManager.hpp>
 #include <Objects/Object.hpp>
 
@@ -19,6 +23,16 @@ void ObjectManager::setWindow(sf::RenderWindow* window)
 sf::RenderWindow* ObjectManager::getWindow()
 {
 	return m_window;
+}
+
+void ObjectManager::setFont(sf::Font* font)
+{
+	m_font = font;
+}
+
+sf::Font* ObjectManager::getFont() const
+{
+	return m_font;
 }
 
 void ObjectManager::edgeConnectionStart(Node* node)
@@ -51,17 +65,20 @@ bool ObjectManager::edgeConnectionComplete(Node* node /*= nullptr*/)
 
 void ObjectManager::deleteObject(Object* object)
 {
-	auto iter = std::find(
-		m_objects.begin(),
-		m_objects.end(),
-		object
-	);
+	auto iter = std::find(begin(), end(), object);
+	assert("deletion of unexisting object" && iter != end());
 
-	if (iter == m_objects.end())
-		return;
-
-	m_deleted_objects.push_back(iter);
-	object->onDelete();
+	if (
+		std::find(
+			m_deleted_objects.begin(), 
+			m_deleted_objects.end(), 
+			iter
+		) == m_deleted_objects.end()
+	)
+	{
+		m_deleted_objects.push_back(iter);
+		object->onDelete();
+	}
 }
 
 void ObjectManager::operator-=(Object* object)
@@ -71,11 +88,7 @@ void ObjectManager::operator-=(Object* object)
 
 void ObjectManager::clear()
 {
-	for (auto iter = m_objects.begin(); iter != m_objects.end(); iter++)
-	{
-		m_deleted_objects.push_back(iter);
-		(*iter)->onDelete();
-	}
+	m_clear = true;
 }
 
 void ObjectManager::drawObjects()
@@ -106,17 +119,31 @@ void ObjectManager::cleanup()
 		m_objects.erase(iter);
 	}
 
+	if (m_clear)
+	{
+		for (auto object: m_objects)
+			delete object;
+
+		m_objects.clear();
+		m_clear = false;
+	}
+
 	m_deleted_objects.clear();
 }
 
 //========================================
 
-ObjectManager::iterator ObjectManager::begin()
+size_t ObjectManager::size() const
+{
+	return m_objects.size();
+}
+
+ObjectManager::container::iterator ObjectManager::begin()
 {
 	return m_objects.begin();
 }
 
-ObjectManager::iterator ObjectManager::end()
+ObjectManager::container::iterator ObjectManager::end()
 {
 	return m_objects.end();
 }

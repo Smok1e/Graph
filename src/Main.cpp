@@ -25,7 +25,7 @@ public:
 
 private:
 	sf::RenderWindow m_render_window {};
-	ObjectManager m_objects {};
+	ObjectManager m_object_manager {};
 
 	sf::Clock m_delta_clock {};
 
@@ -33,6 +33,7 @@ private:
 	sf::Vector2f m_rmb_menu_pos {};
 
 	bool m_imgui_demo_show = false;
+	bool m_objects_show = false;
 
 	void onEvent(const sf::Event& event);
 	void processInterface();
@@ -43,12 +44,18 @@ private:
 
 void Main::run()
 {
+	sf::Font font;
+	if (!font.loadFromFile("resources/CascadiaMono.ttf"))
+		return;
+
+	m_object_manager.setFont(&font);
+
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
 
 	m_render_window.create(sf::VideoMode(1000, 1000), "Graph editor", sf::Style::Default & ~sf::Style::Resize, settings);
 	m_render_window.setVerticalSyncEnabled(true);
-	m_objects.setWindow(&m_render_window);
+	m_object_manager.setWindow(&m_render_window);
 
 	TryEnableImmersiveDarkMode(m_render_window);
 
@@ -66,12 +73,12 @@ void Main::run()
 		m_render_window.clear(sf::Color(24, 24, 24));
 
 		processInterface();
-		m_objects.drawObjects();
+		m_object_manager.drawObjects();
 
 		ImGui::SFML::Render(m_render_window);
 
 		m_render_window.display();
-		m_objects.cleanup();
+		m_object_manager.cleanup();
 	}
 }
 
@@ -80,7 +87,20 @@ void Main::run()
 void Main::processInterface()
 {
 	ImGui::SFML::Update(m_render_window, m_delta_clock.restart());
-	m_objects.processInterface();
+	m_object_manager.processInterface();
+
+	// Main menu bar
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("View"))
+		{
+			ImGui::MenuItem("Objects",    nullptr, &m_objects_show);
+			ImGui::MenuItem("ImGui demo", nullptr, &m_imgui_demo_show);
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
+	}
 
 	// RMB menu
 	if (m_rmb_menu_show)
@@ -99,7 +119,7 @@ void Main::processInterface()
 
 			if (ImGui::Selectable("New node"))
 			{
-				(m_objects += new Node)->setPosition(m_rmb_menu_pos);
+				(m_object_manager += new Node)->setPosition(m_rmb_menu_pos);
 				m_rmb_menu_show = false;
 			}
 
@@ -118,7 +138,7 @@ void Main::processInterface()
 				size_t node_count = node_count_dist(generator);
 				for (size_t i = 0; i < node_count; i++)
 				{
-					auto* node = m_objects += new Node;
+					auto* node = m_object_manager += new Node;
 					node->setPosition(
 						sf::Vector2f(
 							x_dist(generator),
@@ -141,7 +161,7 @@ void Main::processInterface()
 						continue;
 					}
 
-					auto* edge = m_objects += new Edge;
+					auto* edge = m_object_manager += new Edge;
 					edge->setNodeA(nodes[a]);
 					edge->setNodeB(nodes[b]);
 				}
@@ -149,18 +169,56 @@ void Main::processInterface()
 				m_rmb_menu_show = false;
 			}
 
-			if (ImGui::Selectable("Delete all"))
-			{
-				m_objects.clear();
-				m_rmb_menu_show = false;
-			}
-
 			ImGui::End();
 		}
 	}
 
+	// ImGui demo
 	if (m_imgui_demo_show)
-		ImGui::ShowDemoWindow();
+		ImGui::ShowDemoWindow(&m_imgui_demo_show);
+
+	// Objects
+	if (m_objects_show)
+	{
+		if (ImGui::Begin("Object manager", &m_objects_show))
+		{
+			static const char* columns[] = {
+				"#",
+				"Type"
+			};
+
+			ImGui::Text("Objects:");
+			if (ImGui::BeginTable("table_objects", std::size(columns), ImGuiTableFlags_ScrollY | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable))
+			{
+				for (const char* column: columns)
+					ImGui::TableSetupColumn(column);
+
+				ImGui::TableHeadersRow();
+
+				size_t i = 0;
+				for (auto* object: m_object_manager)
+				{
+					ImGui::TableNextRow();
+
+					ImGui::TableNextColumn();
+					ImGui::Selectable(std::to_string(++i).c_str());
+
+					ImGui::TableNextColumn();
+					object->insertSelectableReference();
+				}
+
+				ImGui::EndTable();
+			}
+
+			ImGui::Text("%zu objects in total", m_object_manager.size());
+
+			if (ImGui::Button("Delete all"))
+				m_object_manager.clear();
+
+		}
+
+		ImGui::End();
+	}
 }
 
 //======================================== Event processing
@@ -169,7 +227,7 @@ void Main::onEvent(const sf::Event& event)
 {
 	ImGui::SFML::ProcessEvent(event);
 
-	if (m_objects.onEvent(event))
+	if (m_object_manager.onEvent(event))
 		return;
 
 	auto& io = ImGui::GetIO();
@@ -205,16 +263,15 @@ void Main::onEvent(const sf::Event& event)
 			break;
 
 		case sf::Event::KeyPressed:
-			switch (event.key.code)
+			if (!io.WantCaptureKeyboard)
 			{
-				case sf::Keyboard::Escape:
-					m_rmb_menu_show = false;
-					break;
+				switch (event.key.code)
+				{
+					case sf::Keyboard::Escape:
+						m_rmb_menu_show = false;
+						break;
 
-				case sf::Keyboard::I:
-					m_imgui_demo_show ^= true;
-					break;
-
+				}
 			}
 
 			break;

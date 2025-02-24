@@ -13,6 +13,7 @@ template<typename T> operator sf::Vector2<T> 							\
 }			
 
 #include <imgui.h>
+#include <imgui_stdlib.h>
 #include <imgui-SFML.h>
 
 //========================================

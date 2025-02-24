@@ -12,6 +12,12 @@ class Edge: public Object
 public:
 	Edge();
 
+	void setThickness(float thickness);
+	float getThickness() const;
+
+	void setColor(sf::Color color);
+	sf::Color getColor() const;
+
 	void setNodeA(Node* node);
 	Node* getNodeA() const;
 
