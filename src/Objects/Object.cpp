@@ -21,7 +21,14 @@ bool Object::onEvent(const sf::Event& event)
 	{
 		case sf::Event::MouseMoved:
 		{
-			bool hover = intersect(sf::Vector2f(event.mouseMove.x, event.mouseMove.y));
+			auto mouse = m_object_manager->getWindow()->mapPixelToCoords(
+				sf::Vector2i(
+					event.mouseMove.x, 
+					event.mouseMove.y
+				)
+			);
+
+			bool hover = intersect(mouse);
 			if (hover != m_hovered)
 			{
 				m_hovered = hover;

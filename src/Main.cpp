@@ -15,6 +15,7 @@
 #include <Graph/ImmersiveDarkMode.hpp>
 #include <Graph/ImGuiExtra.hpp>
 #include <Graph/Config.hpp>
+#include <Graph/Utils.hpp>
 
 //========================================
 
@@ -31,8 +32,16 @@ private:
 
 	sf::Clock m_delta_clock {};
 
+	sf::Font m_font {};
+	sf::Cursor m_default_cursor {};
+	sf::Cursor m_drag_cursor {};
+
 	bool m_rmb_menu_show = false;
-	sf::Vector2f m_rmb_menu_pos {};
+	sf::Vector2i m_rmb_menu_pos {};
+
+	bool m_dragging = false;
+	sf::Vector2f m_dragging_start_pos = {};
+	sf::View m_dragging_start_view = {};
 
 	bool m_imgui_demo_show = false;
 	bool m_objects_show = false;
@@ -47,11 +56,13 @@ private:
 
 void Main::run()
 {
-	sf::Font font;
-	if (!font.loadFromFile("resources/CascadiaMono.ttf"))
+	if (!m_font.loadFromFile((config::resources_path/config::font_filename).string()))
 		return;
 
-	m_object_manager.setFont(&font);
+	m_object_manager.setFont(&m_font);
+
+	m_drag_cursor.loadFromSystem(sf::Cursor::SizeAll);
+	m_default_cursor.loadFromSystem(sf::Cursor::Arrow);
 
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
@@ -98,7 +109,7 @@ void Main::processInterface()
 	{
 		if (ImGui::BeginMenu("View"))
 		{
-			ImGui::MenuItem("Objects",    nullptr, &m_objects_show   );
+			// ImGui::MenuItem("Objects",    nullptr, &m_objects_show   );
 			ImGui::MenuItem("ImGui demo", nullptr, &m_imgui_demo_show);
 			ImGui::EndMenu();
 		}
@@ -107,6 +118,9 @@ void Main::processInterface()
 		{
 			if (ImGui::MenuItem("Clear"))
 				m_object_manager.clear();
+
+			if (ImGui::MenuItem("Reset view"))
+				m_render_window.setView(m_render_window.getDefaultView());
 
 			ImGui::EndMenu();
 		}
@@ -131,7 +145,10 @@ void Main::processInterface()
 
 			if (ImGui::Selectable("Node"))
 			{
-				(m_object_manager += new Node)->setPosition(m_rmb_menu_pos);
+				m_object_manager.addObject(new Node)->setPosition(
+					m_render_window.mapPixelToCoords(m_rmb_menu_pos)
+				);
+
 				m_rmb_menu_show = false;
 			}
 
@@ -149,6 +166,7 @@ void Main::processInterface()
 	if (m_imgui_demo_show)
 		ImGui::ShowDemoWindow(&m_imgui_demo_show);
 
+	/*
 	// Objects
 	if (m_objects_show)
 	{
@@ -173,7 +191,7 @@ void Main::processInterface()
 					ImGui::TableNextRow();
 
 					ImGui::TableNextColumn();
-					ImGui::Selectable(std::to_string(++i).c_str());
+					ImGui::Selectable(std::to_string(++i).c_str(), ImGuiSelectableFlags_SpanAllColumns);
 
 					ImGui::TableNextColumn();
 					object->insertSelectableReference();
@@ -191,6 +209,7 @@ void Main::processInterface()
 
 		ImGui::End();
 	}
+	*/
 }
 
 //======================================== Event processing
@@ -210,40 +229,59 @@ void Main::onEvent(const sf::Event& event)
 			break;
 
 		case sf::Event::Resized:
-			m_render_window.setView(
-				sf::View(
-					sf::FloatRect(
-						0, 
-						0, 
-						event.size.width, 
-						event.size.height
-					)
-				)
-			);
+			{
+				auto view = m_render_window.getView();
+				view.setSize  (event.size.width,     event.size.height    );
+				view.setCenter(event.size.width / 2, event.size.height / 2);
+
+				m_render_window.setView(view);
+			}
 
 			break;
 
 		case sf::Event::MouseButtonPressed:
 			if (!io.WantCaptureMouse)
+			{
 				m_rmb_menu_show = false;
+
+				switch (event.mouseButton.button)
+				{
+					case sf::Mouse::Middle:
+						m_dragging = true;
+						m_dragging_start_pos = sf::Vector2f(
+							event.mouseButton.x,
+							event.mouseButton.y
+						);
+
+						m_dragging_start_view = m_render_window.getView();
+						m_render_window.setMouseCursor(m_drag_cursor);
+						break;
+
+				}
+			}
 
 			break;
 
 		case sf::Event::MouseButtonReleased:
-			switch (event.mouseButton.button)
+			if (!io.WantCaptureMouse)
 			{
-				case sf::Mouse::Right:
-					if (!io.WantCaptureMouse)
-					{
+				switch (event.mouseButton.button)
+				{
+					case sf::Mouse::Right:
 						m_rmb_menu_show = true;
-						m_rmb_menu_pos = sf::Vector2f(
+						m_rmb_menu_pos = sf::Vector2i(
 							event.mouseButton.x,
 							event.mouseButton.y
 						);
-					}
 
-					break;
+						break;
 
+					case sf::Mouse::Middle:
+						m_dragging = false;
+						m_render_window.setMouseCursor(m_default_cursor);
+						break;
+
+				}
 			}
 
 			break;
@@ -262,6 +300,41 @@ void Main::onEvent(const sf::Event& event)
 
 			break;
 
+		case sf::Event::MouseMoved:
+			if (m_dragging)
+			{
+				auto delta = m_dragging_start_pos - sf::Vector2f(
+					event.mouseMove.x,
+					event.mouseMove.y
+				);
+
+				m_render_window.setView(
+					sf::View(
+						m_dragging_start_view.getCenter() + delta, 
+						m_dragging_start_view.getSize()
+					)
+				);
+			}
+
+			break;
+
+		case sf::Event::MouseWheelMoved:
+			if (!io.WantCaptureMouse)
+			{
+				constexpr float scroll_speed = 20;
+
+				auto view = m_render_window.getView();
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+					view.move(scroll_speed * event.mouseWheel.delta, 0);
+
+				else 
+					view.move(0, -scroll_speed * event.mouseWheel.delta);
+
+				m_render_window.setView(view);
+			}
+
+			break;
+
 	}
 }
 
@@ -275,12 +348,12 @@ void Main::generateRandomGraph()
 	auto window_size = m_render_window.getSize();
 	std::mt19937 gen(std::random_device{}());
 
-	std::uniform_real_distribution<float> x_dist(
+	std::uniform_int_distribution<int> x_dist(
 		config::node_default_radius, 
 		window_size.x - config::node_default_radius
 	);
 
-	std::uniform_real_distribution<float> y_dist(
+	std::uniform_int_distribution<int> y_dist(
 		config::node_default_radius, 
 		window_size.y - config::node_default_radius
 	);
@@ -292,17 +365,29 @@ void Main::generateRandomGraph()
 	for (size_t i = 0; i < nodes.size(); i++)
 	{
 		nodes[i] = m_object_manager += new Node;
-		nodes[i]->setPosition(sf::Vector2f(x_dist(gen), y_dist(gen)));
+		nodes[i]->setPosition(m_render_window.mapPixelToCoords(
+			sf::Vector2i(
+				x_dist(gen),
+				y_dist(gen)
+			)
+		));
 	}
 
 	std::vector<int> indices(nodes.size());
 	std::iota(indices.begin(), indices.end(), 0);
+
+	auto edge_color = HSV(
+		std::uniform_int_distribution<int>(0x00, 0xFF)(gen),
+		0xFF,
+		0xFF
+	);
 
 	// Connect each node to at least one another
 	for (auto* node: nodes)
 	{
 		// Shuffle nodes indices to iterate them in random order
 		std::shuffle(indices.begin(), indices.end(), gen);
+
 		for (auto i: indices)
 		{
 			Node* item = nodes[i];
@@ -314,6 +399,7 @@ void Main::generateRandomGraph()
 				Edge* edge = m_object_manager += new Edge;
 				edge->setNodeA(node);
 				edge->setNodeB(item);
+				edge->setColor(edge_color);
 
 				break;
 			}
@@ -345,6 +431,7 @@ void Main::generateRandomGraph()
 			Edge* edge = m_object_manager += new Edge;
 			edge->setNodeA(a);
 			edge->setNodeB(b);
+			edge->setColor(edge_color);
 	
 			i++;
 		}

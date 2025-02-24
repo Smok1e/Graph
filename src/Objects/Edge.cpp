@@ -50,7 +50,11 @@ void Edge::setNodeA(Node* node)
 	m_node_a = node;
 
 	if (m_connecting = !m_node_b)
-		m_connecting_end = sf::Vector2f(sf::Mouse::getPosition(*m_object_manager->getWindow()));
+		m_connecting_end = sf::Vector2f(
+			m_object_manager->getWindow()->mapPixelToCoords(
+				sf::Mouse::getPosition(*m_object_manager->getWindow())
+			)
+		);
 
 	node->onEdgeConnected(this);
 }
@@ -89,8 +93,12 @@ bool Edge::onEvent(const sf::Event& event)
 			if (m_connecting)
 			{
 				m_connecting_end = sf::Vector2f(
-					event.mouseMove.x,
-					event.mouseMove.y
+					m_object_manager->getWindow()->mapPixelToCoords(
+						sf::Vector2i(
+							event.mouseMove.x,
+							event.mouseMove.y
+						)
+					)
 				);
 
 				return false;
