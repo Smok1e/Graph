@@ -42,6 +42,8 @@ public:
 	void onEdgeConnected(Edge* edge);
 	void onEdgeDisconnected(Edge* edge);
 
+	const std::vector<Edge*>& getConnectedEdges() const;
+
 private:
 	static size_t s_node_index;
 
@@ -61,6 +63,7 @@ private:
 	const char* getName() const override;
 
 	void onPropertiesShow() override;
+	bool onRMBMenuShow() override;
 
 };
 

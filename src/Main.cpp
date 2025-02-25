@@ -8,8 +8,6 @@
 
 #include <SFML/Graphics.hpp>
 
-#include <Graph/Objects/Node.hpp>
-#include <Graph/Objects/Edge.hpp>
 #include <Graph/Objects/ObjectManager.hpp>
 
 #include <Graph/ImmersiveDarkMode.hpp>
@@ -48,7 +46,9 @@ private:
 
 	void onEvent(const sf::Event& event);
 	void processInterface();
+
 	void generateRandomGraph();
+	void generateGridGraph();
 
 };
 
@@ -72,12 +72,26 @@ void Main::run()
 	m_object_manager.setWindow(&m_render_window);
 
 	TryEnableImmersiveDarkMode(m_render_window);
-
 	ImGui::SFML::Init(m_render_window);
 
 	auto& style = ImGui::GetStyle();
 	style.WindowRounding = 4;
 	style.WindowBorderSize = 0;
+
+	// Loading unicode font
+	auto& io = ImGui::GetIO();
+	io.Fonts->Clear();
+
+	static const ImWchar unicode_ranges[] = { 0x20, 0xFFFF, 0 };
+	io.Fonts->AddFontFromFileTTF(
+		(config::resources_path/config::font_filename).string().c_str(), 
+		config::font_size,
+		nullptr,
+		unicode_ranges
+	);
+
+	io.Fonts->Build();
+	ImGui::SFML::UpdateFontTexture();
 
 	while (m_render_window.isOpen())
 	{
@@ -85,7 +99,7 @@ void Main::run()
 		while (m_render_window.pollEvent(event))
 			onEvent(event);
 
-		m_render_window.clear(sf::Color(24, 24, 24));
+		m_render_window.clear(config::window_background);
 
 		processInterface();
 		m_object_manager.drawObjects();
@@ -155,6 +169,12 @@ void Main::processInterface()
 			if (ImGui::Selectable("Random graph"))
 			{
 				generateRandomGraph();
+				m_rmb_menu_show = false;
+			}
+
+			if (ImGui::Selectable("Grid graph"))
+			{
+				generateGridGraph();
 				m_rmb_menu_show = false;
 			}
 
@@ -308,12 +328,10 @@ void Main::onEvent(const sf::Event& event)
 					event.mouseMove.y
 				);
 
-				m_render_window.setView(
-					sf::View(
-						m_dragging_start_view.getCenter() + delta, 
-						m_dragging_start_view.getSize()
-					)
-				);
+				auto view = m_dragging_start_view;
+				view.move(delta);
+
+				m_render_window.setView(view);
 			}
 
 			break;
@@ -324,7 +342,10 @@ void Main::onEvent(const sf::Event& event)
 				constexpr float scroll_speed = 20;
 
 				auto view = m_render_window.getView();
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt))
+					view.rotate(event.mouseWheel.delta * 7.5f);
+
+				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
 					view.move(scroll_speed * event.mouseWheel.delta, 0);
 
 				else 
@@ -376,11 +397,11 @@ void Main::generateRandomGraph()
 	std::vector<int> indices(nodes.size());
 	std::iota(indices.begin(), indices.end(), 0);
 
-	auto edge_color = HSV(
-		std::uniform_int_distribution<int>(0x00, 0xFF)(gen),
-		0xFF,
-		0xFF
-	);
+	// auto edge_color = HSV(
+	// 	std::uniform_int_distribution<int>(0x00, 0xFF)(gen),
+	// 	0xFF,
+	// 	0xFF
+	// );
 
 	// Connect each node to at least one another
 	for (auto* node: nodes)
@@ -399,13 +420,14 @@ void Main::generateRandomGraph()
 				Edge* edge = m_object_manager += new Edge;
 				edge->setNodeA(node);
 				edge->setNodeB(item);
-				edge->setColor(edge_color);
+				// edge->setColor(edge_color);
 
 				break;
 			}
 		}
 	}
 
+	/*
 	auto random_node = [&nodes, &gen]() -> Node*
 	{
 		return nodes[std::uniform_int_distribution<size_t>(0, nodes.size()-1)(gen)];
@@ -434,6 +456,60 @@ void Main::generateRandomGraph()
 			edge->setColor(edge_color);
 	
 			i++;
+		}
+	}
+	*/
+}
+
+void Main::generateGridGraph()
+{
+	constexpr int    padding = 100;
+	constexpr size_t side    = 5;
+
+	auto size = m_render_window.getSize();
+
+	std::vector<Node*> nodes;
+	for (size_t x = 0; x < side; x++)
+	{
+		for (size_t y = 0; y < side; y++)
+		{
+			Node* node = m_object_manager += new Node;
+			nodes.push_back(node);
+			node->setPosition(
+				m_render_window.mapPixelToCoords(
+					sf::Vector2i(
+						padding + (static_cast<float>(size.x - 2 * padding) / (side - 1)) * x,
+						padding + (static_cast<float>(size.y - 2 * padding) / (side - 1)) * y
+					)
+				)
+			);
+		}
+	}
+
+	auto get_node = [&](size_t x, size_t y) -> Node*
+	{
+		return nodes[y * side + x];
+	};
+
+	for (size_t x = 0; x < side; x++)
+	{
+		for (size_t y = 0; y < side; y++)
+		{
+			Node* node = get_node(x, y);
+
+			if (x < side - 1)
+			{
+				Edge* edge = m_object_manager += new Edge;
+				edge->setNodeA(node);
+				edge->setNodeB(get_node(x + 1, y));
+			}
+
+			if (y < side - 1)
+			{
+				Edge* edge = m_object_manager += new Edge;
+				edge->setNodeA(node);
+				edge->setNodeB(get_node(x, y + 1));
+			}
 		}
 	}
 }

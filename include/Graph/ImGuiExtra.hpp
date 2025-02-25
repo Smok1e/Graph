@@ -16,6 +16,19 @@ template<typename T> operator sf::Vector2<T> 							\
 
 #endif // #ifndef IM_VEC2_CLASS_EXTRA
 
+#ifndef IM_VEC4_CLASS_EXTRA
+
+// Extends ImVec4 to be cmpatiable with sf::Color
+#define IM_VEC4_CLASS_EXTRA					\
+ImVec4(sf::Color color): 					\
+	ImVec4(									\
+		static_cast<float>(color.r) / 0xFF, \
+		static_cast<float>(color.g) / 0xFF,	\
+		static_cast<float>(color.b) / 0xFF,	\
+		static_cast<float>(color.a) / 0xFF	\
+	)
+#endif // #ifndef IM_VEC4_CLASS_EXTRA
+
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <imgui-SFML.h>

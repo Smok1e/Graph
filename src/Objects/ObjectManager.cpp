@@ -5,6 +5,9 @@
 #include <Graph/Objects/ObjectManager.hpp>
 #include <Graph/Objects/Object.hpp>
 
+#include <Graph/Path.hpp>
+#include <Graph/ImGuiExtra.hpp>
+
 //========================================
 
 ObjectManager::~ObjectManager()
@@ -35,6 +38,8 @@ sf::Font* ObjectManager::getFont() const
 	return m_font;
 }
 
+//========================================
+
 void ObjectManager::edgeConnectionStart(Node* node)
 {
 	m_connecting_edge = addObject(new Edge);
@@ -59,6 +64,63 @@ bool ObjectManager::edgeConnectionComplete(Node* node /*= nullptr*/)
 
 	m_connecting_edge = nullptr;
 	return true;
+}
+
+//========================================
+
+void ObjectManager::pathSearchSrc(Node* node)
+{
+	setPathIndication(false);
+	m_path_src = node;
+}
+
+void ObjectManager::pathSearchDst(Node* node)
+{
+	setPathIndication(false);
+
+	assert(m_path_src);
+	m_path_dst = node;
+
+	if (!node)
+	{
+		m_path_src = nullptr;
+		return;
+	}
+
+	m_pathfind_overlay_show = true;
+
+	m_shortest_path = FindShortestPath(m_path_src, node);
+	if (m_shortest_path.empty())
+	{
+		m_path_text = "Path not found";
+		return;
+	}
+
+	m_path_text.clear();
+	for (size_t i = 0; i < m_shortest_path.size() - 1; i++)
+		m_path_text += std::format("{} -> ", m_shortest_path[i]->getLabel());
+
+	m_path_text += m_shortest_path.back()->getLabel();
+	setPathIndication(true);
+}
+
+Node* ObjectManager::getPathSrc()
+{
+	return m_path_src;
+}
+
+Node* ObjectManager::getPathDst()
+{
+	return m_path_dst;
+}
+
+void ObjectManager::setPathIndication(bool enable)
+{
+	if (m_shortest_path.empty())
+		return;
+
+	for (size_t i = 0; i < m_shortest_path.size() - 1; i++)
+		m_shortest_path[i]->isAdjacent(m_shortest_path[i+1])->setPathIndication(enable);
 }
 
 //========================================
@@ -102,6 +164,24 @@ bool ObjectManager::onEvent(const sf::Event& event)
 	for (auto iter = m_objects.rbegin(); iter != m_objects.rend(); iter++)
 		if ((*iter)->onEvent(event)) return true;
 
+	switch (event.type)
+	{
+		case sf::Event::KeyPressed:
+			switch (event.key.code)
+			{
+				case sf::Keyboard::Escape:
+					if (m_pathfind_overlay_show)
+					{
+						setPathIndication(m_pathfind_overlay_show = false);
+						return true;
+					}
+
+					break;
+			}
+
+			break;
+	}
+
 	return false;
 }
 
@@ -109,6 +189,44 @@ void ObjectManager::processInterface()
 {
 	for (auto* object: m_objects)
 		object->processInterface();
+
+	if (m_pathfind_overlay_show)
+	{
+		constexpr auto padding = 10.f;
+		const auto* viewport = ImGui::GetMainViewport();
+
+		ImGui::SetNextWindowBgAlpha(.35f);
+		ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + padding, viewport->WorkPos.y + padding));
+
+		if (
+			ImGui::Begin(
+				"Path finder",
+				nullptr,
+				ImGuiWindowFlags_NoDecoration       | 
+				ImGuiWindowFlags_AlwaysAutoResize   | 
+				ImGuiWindowFlags_NoSavedSettings    | 
+				ImGuiWindowFlags_NoFocusOnAppearing |
+				ImGuiWindowFlags_NoMove
+			)
+		)
+		{
+			ImGui::Text(
+				"Path between %.*s and %.*s", 
+				m_path_src->getLabel().size(),
+				m_path_src->getLabel().data(), 
+				m_path_dst->getLabel().size(),
+				m_path_dst->getLabel().data()
+			);
+
+			ImGui::Separator();
+
+			ImGui::Text("%s", m_path_text.c_str());
+			if (!m_shortest_path.empty())
+				ImGui::Text("%zu steps total", m_shortest_path.size() - 1);
+		}
+
+		ImGui::End();
+	}
 }
 
 void ObjectManager::cleanup()
@@ -123,6 +241,11 @@ void ObjectManager::cleanup()
 	{
 		for (auto object: m_objects)
 			delete object;
+
+		m_shortest_path.clear();
+		m_pathfind_overlay_show = false;
+		m_path_src = nullptr;
+		m_path_dst = nullptr;
 
 		m_objects.clear();
 		m_clear = false;

@@ -14,6 +14,15 @@ sf::Color Interpolate(sf::Color a, sf::Color b, float t)
 	);
 }
 
+sf::Color Invert(sf::Color color)
+{
+	return sf::Color(
+		0xFF - color.r,
+		0xFF - color.g,
+		0xFF - color.b
+	);
+}
+
 sf::Color HSV(int h, int s, int v, int a /*= 0xFF*/)
 {
 	sf::Color rgb;

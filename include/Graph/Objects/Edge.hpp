@@ -24,10 +24,13 @@ public:
 	void setNodeB(Node* node);
 	Node* getNodeB() const;
 
+	Node* opposite(Node* node) const;
+
 	void draw() override;
 	bool onEvent(const sf::Event& event) override;
-
 	void onDelete() override;
+
+	void setPathIndication(bool enable);
 
 private:
 	sf::Color m_color = config::edge_default_color;
@@ -38,6 +41,7 @@ private:
 
 	Node* m_node_a = nullptr;
 	Node* m_node_b = nullptr;
+	bool m_path_indication = false;
 
 	sf::RectangleShape m_rectangle {};
 

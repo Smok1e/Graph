@@ -15,6 +15,7 @@ add_executable(
 	"src/Objects/Edge.cpp"
 	"src/Objects/Object.cpp"
 	"src/Objects/ObjectManager.cpp"
+	"src/Path.cpp"
 	"src/Utils.cpp"
 	"src/ImGuiExtra.cpp"
 	"src/ImmersiveDarkMode.cpp"

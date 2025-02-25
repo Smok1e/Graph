@@ -7,7 +7,9 @@
 #include <SFML/Graphics.hpp>
 
 #include <Graph/Objects/Object.hpp>
+#include <Graph/Objects/Node.hpp>
 #include <Graph/Objects/Edge.hpp>
+#include <Graph/Path.hpp>
 
 //========================================
 
@@ -28,6 +30,12 @@ public:
 
 	void edgeConnectionStart(Node* node);
 	bool edgeConnectionComplete(Node* node = nullptr);
+
+	void pathSearchSrc(Node* node);
+	void pathSearchDst(Node* node);
+
+	Node* getPathSrc();
+	Node* getPathDst();
 
 	template<std::derived_from<Object> T>
 	T* addObject(T* object);
@@ -60,6 +68,14 @@ private:
 
 	Edge* m_connecting_edge = nullptr;
 	bool m_connecting_cancel = false;
+
+	Node* m_path_src = nullptr;
+	Node* m_path_dst = nullptr;
+	Path m_shortest_path {};
+	bool m_pathfind_overlay_show = false;
+	std::string m_path_text = "";
+
+	void setPathIndication(bool enable);
 
 };
 

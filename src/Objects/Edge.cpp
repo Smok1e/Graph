@@ -80,6 +80,15 @@ Node* Edge::getNodeB() const
 	return m_node_b;
 }
 
+Node* Edge::opposite(Node* node) const
+{
+	assert(node && (node == m_node_a || node == m_node_b));
+
+	return node == m_node_a
+		? m_node_b
+		: m_node_a;
+}
+
 //========================================
 
 bool Edge::onEvent(const sf::Event& event)
@@ -134,10 +143,14 @@ void Edge::draw()
 	m_rectangle.setSize(sf::Vector2f(length, m_thickness));
 	m_rectangle.setOrigin(m_rectangle.getSize() * .5f);
 
+	auto color = m_path_indication
+		? config::edge_path_color
+		: m_color;
+
 	m_rectangle.setFillColor(
 		m_hovered
-			? Interpolate(m_color, sf::Color::White, .5f)
-			: m_color
+			? Interpolate(color, sf::Color::White, .5f)
+			: color
 	);
 
 	m_object_manager->getWindow()->draw(m_rectangle);
@@ -256,6 +269,11 @@ void Edge::onDelete()
 
 	if (m_node_b)
 		m_node_b->onEdgeDisconnected(this);
+}
+
+void Edge::setPathIndication(bool enable)
+{
+	m_path_indication = enable;
 }
 
 //========================================

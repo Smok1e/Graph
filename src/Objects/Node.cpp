@@ -30,7 +30,7 @@ Node::Node():
 	else
 		setLabel(std::string_view(&letter, 1));
 				 
-	m_text.setCharacterSize(15);
+	m_text.setCharacterSize(config::font_size);
 }
 
 //========================================
@@ -240,6 +240,25 @@ void Node::onPropertiesShow()
 		ImGui::Text("No edges are connected");
 }
 
+bool Node::onRMBMenuShow()
+{
+	Object::onRMBMenuShow();
+
+	if (ImGui::Selectable("Set as source"))
+	{
+		m_object_manager->pathSearchSrc(this);
+		return true;
+	}
+
+	if (m_object_manager->getPathSrc() && ImGui::Selectable("Set as destination"))
+	{
+		m_object_manager->pathSearchDst(this);
+		return true;
+	}
+
+	return false;
+}
+
 //========================================
 
 void Node::onAdded(ObjectManager* manager)
@@ -253,6 +272,12 @@ void Node::onDelete()
 	auto copy = m_connected_edges;
 	for (auto* edge: copy)
 		m_object_manager->deleteObject(edge);
+
+	if (m_object_manager->getPathSrc() == this)
+		m_object_manager->pathSearchSrc(nullptr);
+
+	if (m_object_manager->getPathDst() == this)
+		m_object_manager->pathSearchDst(nullptr);
 }
 
 void Node::onEdgeConnected(Edge* edge)
@@ -277,6 +302,11 @@ void Node::onEdgeDisconnected(Edge* edge)
 
 	if (iter != m_connected_edges.end())
 		m_connected_edges.erase(iter);
+}
+
+const std::vector<Edge*>& Node::getConnectedEdges() const
+{
+	return m_connected_edges;
 }
 
 //========================================
