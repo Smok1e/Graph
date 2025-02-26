@@ -1,4 +1,5 @@
 #include <cmath>
+#include <numbers>
 
 #include <Graph/Objects/Edge.hpp>
 #include <Graph/Objects/Node.hpp>
