@@ -25,6 +25,12 @@ Path FindShortestPath(Node* src, Node* dst)
 
 		while (!next_found && head.offset < edges.size())
 		{
+			if (shortest_path.size() != 0 && current_path.size() >= shortest_path.size())
+			{
+				head.offset++;
+				break;
+			}
+
 			Node* next = edges[head.offset++]->opposite(head.node);
 
 			if (

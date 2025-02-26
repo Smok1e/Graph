@@ -44,11 +44,16 @@ private:
 	bool m_imgui_demo_show = false;
 	bool m_objects_show = false;
 
+	sf::RectangleShape m_background_rect;
+	sf::Shader m_background_shader;
+	bool m_show_background_dots = true;
+
 	void onEvent(const sf::Event& event);
 	void processInterface();
 
 	void generateRandomGraph();
 	void generateGridGraph();
+	void generateCircularGraph();
 
 };
 
@@ -57,6 +62,9 @@ private:
 void Main::run()
 {
 	if (!m_font.loadFromFile((config::resources_path/config::font_filename).string()))
+		return;
+
+	if (!m_background_shader.loadFromFile((config::resources_path/"shaders/background.frag").string(), sf::Shader::Fragment))
 		return;
 
 	m_object_manager.setFont(&m_font);
@@ -75,8 +83,8 @@ void Main::run()
 	assert(ImGui::SFML::Init(m_render_window));
 
 	auto& style = ImGui::GetStyle();
-	style.WindowRounding = 4;
-	style.WindowBorderSize = 0;
+	style.WindowRounding = style.PopupBorderSize = 4;
+	style.WindowBorderSize = style.PopupBorderSize = 0;
 
 	// Loading unicode font
 	auto& io = ImGui::GetIO();
@@ -92,6 +100,11 @@ void Main::run()
 
 	io.Fonts->Build();
 	assert(ImGui::SFML::UpdateFontTexture());
+									   
+	m_background_shader.setUniform("background_color",        sf::Glsl::Vec4(config::background_color));
+	m_background_shader.setUniform("background_dot_color",    sf::Glsl::Vec4(config::background_dot_color));
+	m_background_shader.setUniform("background_dot_radius",   config::background_dot_radius);
+	m_background_shader.setUniform("background_dot_distance", config::background_dot_distance);
 
 	while (m_render_window.isOpen())
 	{
@@ -99,7 +112,14 @@ void Main::run()
 		while (m_render_window.pollEvent(event))
 			onEvent(event);
 
-		m_render_window.clear(config::window_background);
+		m_render_window.clear();
+
+		m_background_rect.setSize(sf::Vector2f(m_render_window.getSize()));
+		m_background_rect.setPosition(sf::Vector2(m_render_window.mapPixelToCoords(sf::Vector2i(0, 0))));
+
+		m_background_shader.setUniform("enable", m_show_background_dots);
+		m_background_shader.setUniform("center", m_render_window.getView().getCenter());
+		m_render_window.draw(m_background_rect, &m_background_shader);
 
 		processInterface();
 		m_object_manager.drawObjects();
@@ -124,7 +144,8 @@ void Main::processInterface()
 		if (ImGui::BeginMenu("View"))
 		{
 			// ImGui::MenuItem("Objects",    nullptr, &m_objects_show   );
-			ImGui::MenuItem("ImGui demo", nullptr, &m_imgui_demo_show);
+			ImGui::MenuItem("Show background dots", nullptr, &m_show_background_dots);
+			ImGui::MenuItem("Imgui demo",           nullptr, &m_imgui_demo_show     );
 			ImGui::EndMenu();
 		}
 
@@ -134,7 +155,14 @@ void Main::processInterface()
 				m_object_manager.clear();
 
 			if (ImGui::MenuItem("Reset view"))
-				m_render_window.setView(m_render_window.getDefaultView());
+				m_render_window.setView(
+					sf::View(
+						sf::FloatRect(
+							sf::Vector2f(0, 0), 
+							sf::Vector2f(m_render_window.getSize())
+						)
+					)
+				);
 
 			ImGui::EndMenu();
 		}
@@ -155,7 +183,7 @@ void Main::processInterface()
 			)
 		)
 		{
-			ImGui::SeparatorText("Create");
+			ImGui::SeparatorText("New");
 
 			if (ImGui::Selectable("Node"))
 			{
@@ -166,16 +194,27 @@ void Main::processInterface()
 				m_rmb_menu_show = false;
 			}
 
-			if (ImGui::Selectable("Random graph"))
+			if (ImGui::BeginMenu("Graph"))
 			{
-				generateRandomGraph();
-				m_rmb_menu_show = false;
-			}
+				if (ImGui::MenuItem("Random"))
+				{
+					generateRandomGraph();
+					m_rmb_menu_show = false;
+				}
 
-			if (ImGui::Selectable("Grid graph"))
-			{
-				generateGridGraph();
-				m_rmb_menu_show = false;
+				if (ImGui::MenuItem("Grid"))
+				{
+					generateGridGraph();
+					m_rmb_menu_show = false;
+				}
+
+				if (ImGui::MenuItem("Circular"))
+				{
+					generateCircularGraph();
+					m_rmb_menu_show = false;
+				}
+
+				ImGui::EndMenu();
 			}
 
 			ImGui::End();
@@ -511,6 +550,38 @@ void Main::generateGridGraph()
 				edge->setNodeB(get_node(x, y + 1));
 			}
 		}
+	}
+}
+
+void Main::generateCircularGraph()
+{
+	constexpr size_t node_count = 10;
+	constexpr size_t padding = 100;
+
+	auto window_size = m_render_window.getSize();
+	auto center = sf::Vector2f(window_size) * .5f;
+	float radius = std::min(window_size.x, window_size.y) / 2 - padding;
+
+	std::vector<Node*> nodes;
+	for (size_t i = 0; i < node_count; i++)
+	{
+		Node* node = m_object_manager += new Node;
+
+		float angle = (2 * std::numbers::pi / node_count) * i;
+		node->setPosition(
+			m_render_window.mapPixelToCoords(
+				sf::Vector2i(center + radius * sf::Vector2f(cos(angle), sin(angle)))
+			)
+		);
+
+		nodes.push_back(node);
+	}
+
+	for (size_t i = 0; i < node_count; i++)
+	{
+		Edge* edge = m_object_manager += new Edge;
+		edge->setNodeA(nodes[i]);
+		edge->setNodeB(nodes[(i + 1) % node_count]);
 	}
 }
 

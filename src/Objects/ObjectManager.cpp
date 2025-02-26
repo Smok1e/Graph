@@ -123,6 +123,15 @@ void ObjectManager::setPathIndication(bool enable)
 		m_shortest_path[i]->isAdjacent(m_shortest_path[i+1])->setPathIndication(enable);
 }
 
+void ObjectManager::cancelPathSearch()
+{
+	setPathIndication(false);
+	m_pathfind_overlay_show = false;
+	m_path_src = nullptr;
+	m_path_dst = nullptr;
+	m_shortest_path.clear();
+}
+
 //========================================
 
 void ObjectManager::deleteObject(Object* object)
@@ -172,7 +181,7 @@ bool ObjectManager::onEvent(const sf::Event& event)
 				case sf::Keyboard::Escape:
 					if (m_pathfind_overlay_show)
 					{
-						setPathIndication(m_pathfind_overlay_show = false);
+						cancelPathSearch();
 						return true;
 					}
 

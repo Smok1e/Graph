@@ -33,6 +33,7 @@ public:
 
 	void pathSearchSrc(Node* node);
 	void pathSearchDst(Node* node);
+	void cancelPathSearch();
 
 	Node* getPathSrc();
 	Node* getPathDst();

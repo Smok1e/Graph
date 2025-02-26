@@ -242,17 +242,22 @@ void Node::onPropertiesShow()
 
 bool Node::onRMBMenuShow()
 {
-	Object::onRMBMenuShow();
-
-	if (ImGui::Selectable("Set as source"))
-	{
-		m_object_manager->pathSearchSrc(this);
+	if (Object::onRMBMenuShow())
 		return true;
+
+	if (m_object_manager->getPathSrc() && !m_object_manager->getPathDst())
+	{
+		if (ImGui::Selectable("Find path"))
+		{
+			m_object_manager->pathSearchDst(this);
+			return true;
+		}
 	}
 
-	if (m_object_manager->getPathSrc() && ImGui::Selectable("Set as destination"))
+	else if (ImGui::Selectable("Start path"))
 	{
-		m_object_manager->pathSearchDst(this);
+		m_object_manager->cancelPathSearch();
+		m_object_manager->pathSearchSrc(this);
 		return true;
 	}
 
