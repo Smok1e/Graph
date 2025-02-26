@@ -1,6 +1,6 @@
 #include <cassert>
 #include <algorithm>
-#include <iostream>
+#include <format>
 
 #include <Graph/Objects/ObjectManager.hpp>
 #include <Graph/Objects/Object.hpp>

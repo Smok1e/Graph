@@ -181,6 +181,8 @@ bool Object::onRMBMenuShow()
 		m_object_manager->deleteObject(this);
 		return true;
 	}	
+
+	return false;
 }
 
 void Object::onPropertiesShow()

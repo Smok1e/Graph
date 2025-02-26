@@ -1,6 +1,4 @@
 #include <cmath>
-#include <numbers>
-#include <iostream>
 
 #include <Graph/Objects/Edge.hpp>
 #include <Graph/Objects/Node.hpp>
@@ -134,8 +132,8 @@ void Edge::draw()
 	auto a = getAPosition();
 	auto b = getBPosition();
 
-	auto direction = b - a;
-	auto length = sqrt(direction.x*direction.x + direction.y*direction.y);
+	auto direction = b - a;	
+	float length = sqrt(direction.x*direction.x + direction.y*direction.y);
 	auto angle = atan2(direction.y, direction.x);
 
 	m_rectangle.setPosition(a + .5f * direction);
@@ -165,7 +163,7 @@ bool Edge::intersect(const sf::Vector2f& point)	const
 	auto b = getBPosition();
 
 	auto distance = b - a;
-	auto length = sqrt(distance.x*distance.x + distance.y*distance.y);
+	float length = sqrt(distance.x*distance.x + distance.y*distance.y);
 
 	//      _
 	//      e1

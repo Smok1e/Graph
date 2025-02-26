@@ -72,7 +72,7 @@ void Main::run()
 	m_object_manager.setWindow(&m_render_window);
 
 	TryEnableImmersiveDarkMode(m_render_window);
-	ImGui::SFML::Init(m_render_window);
+	assert(ImGui::SFML::Init(m_render_window));
 
 	auto& style = ImGui::GetStyle();
 	style.WindowRounding = 4;
@@ -91,7 +91,7 @@ void Main::run()
 	);
 
 	io.Fonts->Build();
-	ImGui::SFML::UpdateFontTexture();
+	assert(ImGui::SFML::UpdateFontTexture());
 
 	while (m_render_window.isOpen())
 	{
@@ -236,7 +236,7 @@ void Main::processInterface()
 
 void Main::onEvent(const sf::Event& event)
 {
-	ImGui::SFML::ProcessEvent(event);
+	ImGui::SFML::ProcessEvent(m_render_window, event);
 
 	if (m_object_manager.onEvent(event))
 		return;
