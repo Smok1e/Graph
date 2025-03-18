@@ -1,5 +1,6 @@
 #include <cmath>
 #include <numbers>
+#include <format>
 
 #include <Graph/Objects/Edge.hpp>
 #include <Graph/Objects/Node.hpp>
@@ -15,6 +16,15 @@ Edge::Edge():
 	Object()
 {
 	m_rectangle.setFillColor(config::edge_default_color);
+	m_text.setCharacterSize(config::font_size);
+
+	setWeight(m_weight);
+}
+						
+void Edge::onAdded(ObjectManager* manager)
+{
+	Object::onAdded(manager);
+	m_text.setFont(*manager->getFont());
 }
 
 //========================================
@@ -79,6 +89,16 @@ Node* Edge::getNodeB() const
 	return m_node_b;
 }
 
+void Edge::setWeight(int weight)
+{
+	m_text.setString(std::to_string(m_weight));
+}
+
+int Edge::getWeight() const
+{
+	return m_weight;
+}
+
 Node* Edge::opposite(Node* node) const
 {
 	assert(node && (node == m_node_a || node == m_node_b));
@@ -86,6 +106,11 @@ Node* Edge::opposite(Node* node) const
 	return node == m_node_a
 		? m_node_b
 		: m_node_a;
+}
+
+bool Edge::isConnectedTo(Node* node) const
+{
+	return node == m_node_a || node == m_node_b;
 }
 
 //========================================
@@ -136,8 +161,9 @@ void Edge::draw()
 	auto direction = b - a;	
 	float length = sqrt(direction.x*direction.x + direction.y*direction.y);
 	auto angle = atan2(direction.y, direction.x);
+	auto center = a + .5f * direction;
 
-	m_rectangle.setPosition(a + .5f * direction);
+	m_rectangle.setPosition(center);
 	m_rectangle.setRotation((180.0 / std::numbers::pi) * angle);
 	m_rectangle.setSize(sf::Vector2f(length, m_thickness));
 	m_rectangle.setOrigin(m_rectangle.getSize() * .5f);
@@ -153,6 +179,11 @@ void Edge::draw()
 	);
 
 	m_object_manager->getWindow()->draw(m_rectangle);
+
+	m_text.setFillColor(color);
+	m_text.setPosition(center + 20.f * sf::Vector2f(-direction.y, direction.x) / length);
+
+	m_object_manager->getWindow()->draw(m_text);
 }
 
 bool Edge::intersect(const sf::Vector2f& point)	const
@@ -221,6 +252,9 @@ void Edge::onPropertiesShow()
 {
 	ImGui::SliderFloat("Thickness", &m_thickness, 1.f, 20.f);
 	ImGui::ColorEdit3("Color", &m_color);
+
+	if (ImGui::SliderInt("Weight", &m_weight, 1, 100))
+		setWeight(m_weight);
 
 	ImGui::Text("Connected nodes:");
 	if (ImGui::BeginTable("table_connected_nodes", 2, ImGuiTableFlags_Borders))

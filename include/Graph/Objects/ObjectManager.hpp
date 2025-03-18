@@ -44,6 +44,9 @@ public:
 	template<std::derived_from<Object> T>
 	T* operator+=(T* object);
 
+	template<std::derived_from<Object> T>
+	std::vector<T*> findAll();
+
 	void deleteObject(Object* object);
 	void operator-=(Object* object);
 
@@ -95,6 +98,17 @@ template<std::derived_from<Object> T>
 T* ObjectManager::operator+=(T* object)
 {
 	return addObject(object);
+}
+
+template<std::derived_from<Object> T>
+std::vector<T*> ObjectManager::findAll()
+{
+	std::vector<T*> objects;
+	for (auto* object: m_objects)
+		if (T* casted_object = dynamic_cast<T*>(object))
+			objects.push_back(casted_object);
+
+	return objects;
 }
 
 //========================================

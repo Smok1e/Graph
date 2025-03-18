@@ -12,6 +12,8 @@ class Edge: public Object
 public:
 	Edge();
 
+	void onAdded(ObjectManager* manager);
+
 	void setThickness(float thickness);
 	float getThickness() const;
 
@@ -24,7 +26,11 @@ public:
 	void setNodeB(Node* node);
 	Node* getNodeB() const;
 
+	void setWeight(int weight);
+	int getWeight() const;
+
 	Node* opposite(Node* node) const;
+	bool isConnectedTo(Node* node) const;
 
 	void draw() override;
 	bool onEvent(const sf::Event& event) override;
@@ -33,8 +39,9 @@ public:
 	void setPathIndication(bool enable);
 
 private:
-	sf::Color m_color = config::edge_default_color;
-	float m_thickness = config::edge_default_thickness;
+	sf::Color m_color     = config::edge_default_color;
+	float     m_thickness = config::edge_default_thickness;
+	int       m_weight    = config::edge_default_weight;
 
 	bool m_connecting = false;
 	sf::Vector2f m_connecting_end {};
@@ -44,6 +51,7 @@ private:
 	bool m_path_indication = false;
 
 	sf::RectangleShape m_rectangle {};
+	sf::Text           m_text      {};
 
 	bool intersect(const sf::Vector2f& point) const override;
 	const char* getName() const override;

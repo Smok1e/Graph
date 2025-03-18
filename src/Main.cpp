@@ -44,12 +44,23 @@ private:
 	bool m_imgui_demo_show = false;
 	bool m_objects_show = false;
 
+	bool m_adjacency_matrix_show = false;
+	std::vector<std::string> m_adjacency_matrix_columns {};
+	std::vector<int>         m_adjacency_matrix_cells   {};
+
+	bool m_incidence_matrix_show = false;
+	std::vector<std::string> m_incidence_matrix_rows {};
+	std::vector<bool>        m_incidence_matrix_cells   {};
+
 	sf::RectangleShape m_background_rect;
 	sf::Shader m_background_shader;
 	bool m_show_background_dots = true;
 
 	void onEvent(const sf::Event& event);
 	void processInterface();
+
+	void showAdjacencyMatrix();
+	void showIncidenceMatrix();
 
 	void generateRandomGraph();
 	void generateGridGraph();
@@ -112,7 +123,7 @@ void Main::run()
 		while (m_render_window.pollEvent(event))
 			onEvent(event);
 
-		m_render_window.clear();
+		m_render_window.clear() ;
 
 		m_background_rect.setSize(sf::Vector2f(m_render_window.getSize()));
 		m_background_rect.setPosition(sf::Vector2(m_render_window.mapPixelToCoords(sf::Vector2i(0, 0))));
@@ -146,15 +157,8 @@ void Main::processInterface()
 			// ImGui::MenuItem("Objects",    nullptr, &m_objects_show   );
 			ImGui::MenuItem("Show background dots", nullptr, &m_show_background_dots);
 			ImGui::MenuItem("Imgui demo",           nullptr, &m_imgui_demo_show     );
-			ImGui::EndMenu();
-		}
 
-		if (ImGui::BeginMenu("Edit"))
-		{
-			if (ImGui::MenuItem("Clear"))
-				m_object_manager.clear();
-
-			if (ImGui::MenuItem("Reset view"))
+			if (ImGui::MenuItem("Reset camera"))
 				m_render_window.setView(
 					sf::View(
 						sf::FloatRect(
@@ -163,6 +167,20 @@ void Main::processInterface()
 						)
 					)
 				);
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Graph"))
+		{
+			if (ImGui::MenuItem("Clear"))
+				m_object_manager.clear();
+
+			if (ImGui::MenuItem("Adjacency matrix"))
+				showAdjacencyMatrix();
+
+			if (ImGui::MenuItem("Incidence matrix"))
+				showIncidenceMatrix();
 
 			ImGui::EndMenu();
 		}
@@ -269,6 +287,171 @@ void Main::processInterface()
 		ImGui::End();
 	}
 	*/
+
+	// Adjacency matrix
+	if (m_adjacency_matrix_show)
+	{
+		if (ImGui::Begin("Adjacency matrix", &m_adjacency_matrix_show))
+		{
+			if (m_adjacency_matrix_columns.empty())
+				ImGui::Text("Graph is empty");
+
+			else
+			{
+				if (
+					ImGui::BeginTable(
+						"table_adjacency_matrix", 
+						1 + m_adjacency_matrix_columns.size(), 
+						ImGuiTableFlags_ScrollY   | 
+						ImGuiTableFlags_Borders   | 
+						ImGuiTableFlags_Resizable
+					)
+				)
+				{
+					ImGui::TableSetupColumn("");
+					for (const auto& column: m_adjacency_matrix_columns)
+						ImGui::TableSetupColumn(column.c_str());
+
+					ImGui::TableHeadersRow();
+
+					for (size_t row = 0; row < m_adjacency_matrix_columns.size(); row++)
+					{
+						ImGui::TableNextRow();
+
+						for (size_t col = 0; col < 1 + m_adjacency_matrix_columns.size(); col++)
+						{
+							ImGui::TableNextColumn();
+
+							if (!col)
+							{
+								ImGui::Text("%s", m_adjacency_matrix_columns[row].c_str());
+								continue;
+							}
+
+							ImGui::Text(
+								"%d", 
+								m_adjacency_matrix_cells[row * m_adjacency_matrix_columns.size() + col - 1]
+							);
+						}
+					}
+
+					ImGui::EndTable();
+				}
+			}
+		}
+
+		ImGui::End();
+	}
+
+	// Incidence matrix
+	if (m_incidence_matrix_show)
+	{
+		if (ImGui::Begin("Incidence matrix", &m_incidence_matrix_show))
+		{
+			if (m_incidence_matrix_rows.empty())
+				ImGui::Text("Graph is empty");
+
+			else
+			{
+				size_t cols = m_incidence_matrix_cells.size() / m_incidence_matrix_rows.size();
+
+				if (
+					ImGui::BeginTable(
+						"table_incidence_matrix", 
+						1 + cols, 
+						ImGuiTableFlags_ScrollY   | 
+						ImGuiTableFlags_Borders   | 
+						ImGuiTableFlags_Resizable
+					)
+				)
+				{
+					ImGui::TableSetupColumn("");
+					for (size_t i = 0; i < cols; i++)
+					{
+						char buffer[16] = "";
+						snprintf(buffer, std::size(buffer), "%zu", i + 1);
+
+						ImGui::TableSetupColumn(buffer);
+					}
+
+					ImGui::TableHeadersRow();
+
+					for (size_t row = 0; row < m_incidence_matrix_rows.size(); row++)
+					{
+						ImGui::TableNextRow();
+
+						for (size_t col = 0; col < 1 + cols; col++)
+						{
+							ImGui::TableNextColumn();
+
+							if (!col)
+							{
+								ImGui::Text("%s", m_incidence_matrix_rows[row].c_str());
+								continue;
+							}
+
+							ImGui::Text(
+								"%d", 
+								static_cast<int>(
+									m_incidence_matrix_cells[row * cols + col - 1]
+								)
+							);
+						}
+					}
+
+					ImGui::EndTable();
+				}
+			}
+		}
+
+		ImGui::End();
+	}
+}
+
+void Main::showAdjacencyMatrix()
+{
+	auto nodes = m_object_manager.findAll<Node>();
+
+	m_adjacency_matrix_columns.clear();
+	for (auto* node: nodes)
+		m_adjacency_matrix_columns.emplace_back(node->getLabel());
+
+	m_adjacency_matrix_cells.clear();
+	m_adjacency_matrix_cells.resize(std::pow(nodes.size(), 2));
+
+	for (size_t i = 0; i < m_adjacency_matrix_cells.size(); i++)
+	{
+		Edge* edge = nodes[i % nodes.size()]->isAdjacent(nodes[i / nodes.size()]);
+
+		m_adjacency_matrix_cells[i] = edge
+			? edge->getWeight()
+			: 0;
+	}
+
+	m_adjacency_matrix_show = true;
+}
+
+void Main::showIncidenceMatrix()
+{
+	auto edges = m_object_manager.findAll<Edge>();
+	auto nodes = m_object_manager.findAll<Node>();
+
+	m_incidence_matrix_rows.clear();
+	for (auto* node: nodes)
+		m_incidence_matrix_rows.emplace_back(node->getLabel());
+
+	m_incidence_matrix_cells.clear();
+	m_incidence_matrix_cells.resize(nodes.size() * edges.size());
+
+	for (size_t i = 0; i < m_incidence_matrix_cells.size(); i++)
+	{
+		auto* edge = edges[i % edges.size()];
+		auto* node = nodes[i / edges.size()];
+
+		m_incidence_matrix_cells[i] = edge->isConnectedTo(node);
+	}
+
+	m_incidence_matrix_show = true;
 }
 
 //======================================== Event processing

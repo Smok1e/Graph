@@ -17,14 +17,15 @@ void main()
 {
 	if (enable)
 	{
+		vec2 pos = gl_FragCoord.xy + center * vec2(1, -1);
 		vec2 position = mod(
-			gl_FragCoord.xy + center * vec2(1, -1) + background_dot_distance / 2, 
+			pos + background_dot_distance / 2, 
 			background_dot_distance
 		) - background_dot_distance / 2;
 
 		out_Color = length(position) <= background_dot_radius
 			? background_dot_color
-			: background_color;
+			: background_color;	
 	}
 
 	else
