@@ -70,13 +70,12 @@ bool ObjectManager::edgeConnectionComplete(Node* node /*= nullptr*/)
 
 void ObjectManager::pathSearchSrc(Node* node)
 {
-	setPathIndication(false);
 	m_path_src = node;
 }
 
 void ObjectManager::pathSearchDst(Node* node)
 {
-	setPathIndication(false);
+	m_path = Path::Empty();
 
 	assert(m_path_src);
 	m_path_dst = node;
@@ -88,20 +87,7 @@ void ObjectManager::pathSearchDst(Node* node)
 	}
 
 	m_pathfind_overlay_show = true;
-
-	m_shortest_path = FindShortestPath(m_path_src, node);
-	if (m_shortest_path.empty())
-	{
-		m_path_text = "Path not found";
-		return;
-	}
-
-	m_path_text.clear();
-	for (size_t i = 0; i < m_shortest_path.size() - 1; i++)
-		m_path_text += std::format("{} -> ", m_shortest_path[i]->getLabel());
-
-	m_path_text += m_shortest_path.back()->getLabel();
-	setPathIndication(true);
+	m_path = Path::Shortest(m_path_src, m_path_dst);
 }
 
 Node* ObjectManager::getPathSrc()
@@ -114,22 +100,12 @@ Node* ObjectManager::getPathDst()
 	return m_path_dst;
 }
 
-void ObjectManager::setPathIndication(bool enable)
-{
-	if (m_shortest_path.empty())
-		return;
-
-	for (size_t i = 0; i < m_shortest_path.size() - 1; i++)
-		m_shortest_path[i]->isAdjacent(m_shortest_path[i+1])->setPathIndication(enable);
-}
-
 void ObjectManager::cancelPathSearch()
 {
-	setPathIndication(false);
+	m_path = Path::Empty();
 	m_pathfind_overlay_show = false;
 	m_path_src = nullptr;
 	m_path_dst = nullptr;
-	m_shortest_path.clear();
 }
 
 //========================================
@@ -218,20 +194,17 @@ void ObjectManager::processInterface()
 				ImGuiWindowFlags_NoMove
 			)
 		)
-		{
-			ImGui::Text(
-				"Path between %.*s and %.*s", 
-				m_path_src->getLabel().size(),
-				m_path_src->getLabel().data(), 
-				m_path_dst->getLabel().size(),
-				m_path_dst->getLabel().data()
-			);
-
+		{							
+			ImGui::Text("Path");
 			ImGui::Separator();
 
-			ImGui::Text("%s", m_path_text.c_str());
-			if (!m_shortest_path.empty())
-				ImGui::Text("%zu steps total", m_shortest_path.size() - 1);
+			auto text = m_path.getString();
+			ImGui::Text("%.*s", text.length(), text.data());
+			if (m_path)
+			{
+				ImGui::Text("Lengh: %zu", m_path.getLength());
+				ImGui::Text("Weight: %d", m_path.getWeight());
+			}
 		}
 
 		ImGui::End();
@@ -251,7 +224,7 @@ void ObjectManager::cleanup()
 		for (auto object: m_objects)
 			delete object;
 
-		m_shortest_path.clear();
+		m_path = Path::Empty();
 		m_pathfind_overlay_show = false;
 		m_path_src = nullptr;
 		m_path_dst = nullptr;
@@ -261,6 +234,20 @@ void ObjectManager::cleanup()
 	}
 
 	m_deleted_objects.clear();
+}
+
+//========================================
+
+void ObjectManager::onNodeDeleted(Node* node)
+{
+	if (m_path.contains(node))
+		cancelPathSearch();
+}
+
+void ObjectManager::onEdgeDeleted(Edge* edge)
+{
+	if (m_path.contains(edge))
+		cancelPathSearch();
 }
 
 //========================================

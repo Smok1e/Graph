@@ -488,15 +488,19 @@ void Main::onEvent(const sf::Event& event)
 
 				switch (event.mouseButton.button)
 				{
-					case sf::Mouse::Middle:
-						m_dragging = true;
-						m_dragging_start_pos = sf::Vector2f(
-							event.mouseButton.x,
-							event.mouseButton.y
-						);
+					case sf::Mouse::Left:
+						if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+						{
+							m_dragging = true;
+							m_dragging_start_pos = sf::Vector2f(
+								event.mouseButton.x,
+								event.mouseButton.y
+							);
 
-						m_dragging_start_view = m_render_window.getView();
-						m_render_window.setMouseCursor(m_drag_cursor);
+							m_dragging_start_view = m_render_window.getView();
+							m_render_window.setMouseCursor(m_drag_cursor);
+						}
+
 						break;
 
 				}
@@ -518,7 +522,7 @@ void Main::onEvent(const sf::Event& event)
 
 						break;
 
-					case sf::Mouse::Middle:
+					case sf::Mouse::Left:
 						m_dragging = false;
 						m_render_window.setMouseCursor(m_default_cursor);
 						break;

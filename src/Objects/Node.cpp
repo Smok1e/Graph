@@ -278,11 +278,7 @@ void Node::onDelete()
 	for (auto* edge: copy)
 		m_object_manager->deleteObject(edge);
 
-	if (m_object_manager->getPathSrc() == this)
-		m_object_manager->pathSearchSrc(nullptr);
-
-	if (m_object_manager->getPathDst() == this)
-		m_object_manager->pathSearchDst(nullptr);
+	m_object_manager->onNodeDeleted(this);
 }
 
 void Node::onEdgeConnected(Edge* edge)

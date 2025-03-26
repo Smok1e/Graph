@@ -302,6 +302,8 @@ void Edge::onDelete()
 
 	if (m_node_b)
 		m_node_b->onEdgeDisconnected(this);
+
+	m_object_manager->onEdgeDeleted(this);
 }
 
 void Edge::setPathIndication(bool enable)

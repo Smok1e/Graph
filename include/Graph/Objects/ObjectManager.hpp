@@ -57,6 +57,9 @@ public:
 	void processInterface();
 	void cleanup();
 
+	void onNodeDeleted(Node* node);
+	void onEdgeDeleted(Edge* edge);
+
 	size_t size() const;
 	container::iterator begin();
 	container::iterator end();
@@ -75,11 +78,8 @@ private:
 
 	Node* m_path_src = nullptr;
 	Node* m_path_dst = nullptr;
-	Path m_shortest_path {};
 	bool m_pathfind_overlay_show = false;
-	std::string m_path_text = "";
-
-	void setPathIndication(bool enable);
+	Path m_path { Path::Empty() };
 
 };
 
